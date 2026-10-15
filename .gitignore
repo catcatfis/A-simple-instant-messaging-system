@@ -1,0 +1,35 @@
+# ===== 私密信息 / 本机环境（绝不提交） =====
+
+# 个人资料
+面试档案/
+PATH-backup-user.txt
+
+# 内网穿透工具（含 authtoken）
+_tools/
+
+# 调试探针脚本（含真实 uid、签名算法，且与本地环境强绑定）
+_probe/
+
+# 日志与运行时产物
+logs/
+logs-8081/
+logs-8083/
+*.log
+
+# 上传的文件（本地 OSS 存储）
+oss-data/
+oss-data2/
+
+# 数据库密码脚本
+import_sql.bat
+
+# 构建与缓存
+target/
+node_modules/
+dist/
+.npm-cache/
+.pnpm-store/
+.idea/
+.workbuddy/
+_symlink-test/
+*.local
