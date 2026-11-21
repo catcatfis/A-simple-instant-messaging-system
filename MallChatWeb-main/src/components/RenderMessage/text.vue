@@ -7,19 +7,35 @@ const props = defineProps<{ body: TextBody }>()
 // 获取所有匹配的字符串
 const urlMap = props.body.urlContentMap || {}
 const keys = Object.keys(urlMap)
+
+/**
+ * 转义正则元字符：链接来自其他用户的消息内容，
+ * 未转义时形如 a(b) 的地址会让 new RegExp 抛 SyntaxError，导致整条消息渲染失败。
+ */
+const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // 使用匹配字符串创建动态正则表达式，并将文本拆分为片段数组
 const fragments = computed(() => {
   let content = props.body.content || ''
   content = content.replace(/&nbsp;/g, '\u00A0')
-  const regex = new RegExp(`(@\\S+\\s|${keys.join('|')}|\\S+\\s)`, 'g')
+  const escapedKeys = keys.filter((key) => key.trim() !== '').map(escapeRegExp)
+  const urlPart = escapedKeys.length > 0 ? `${escapedKeys.join('|')}|` : ''
+  const regex = new RegExp(`(@\\S+\\s|${urlPart}\\S+\\s)`, 'g')
   return content.split(regex)
 })
 
 // 打开链接
 const openUrl = (url: string) => {
   if (!url) return
-  // 当没有协议时，自动添加协议
-  window.open(url.startsWith('http') ? url : '//' + url, '_blank')
+  // 仅放行 http/https，避免 javascript: 等危险协议；无协议时按 https 补全
+  let target: URL
+  try {
+    target = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`)
+  } catch {
+    return
+  }
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') return
+  window.open(target.href, '_blank', 'noopener,noreferrer')
 }
 
 function onImageLoadError(e: Event) {

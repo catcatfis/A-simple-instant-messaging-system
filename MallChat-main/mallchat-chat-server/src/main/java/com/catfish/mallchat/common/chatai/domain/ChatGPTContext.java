@@ -1,0 +1,27 @@
+package com.catfish.mallchat.common.chatai.domain;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ChatGPTContext
+ */
+
+@Getter
+@Setter
+public class ChatGPTContext implements Serializable {
+
+    private Long roomId;
+
+    private Long uid;
+
+    private List<ChatGPTMsg> msg = new ArrayList<>();
+
+    public void addMsg(ChatGPTMsg msg) {
+        this.msg.add(msg);
+    }
+}

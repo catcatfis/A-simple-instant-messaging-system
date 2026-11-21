@@ -24,6 +24,10 @@ import java.io.InputStream;
  * 因此这里只负责把请求体落盘，不做任何业务处理。
  * 路径校验由 {@link LocalOssTemplate#resolve} 负责，防止目录穿越。
  * <p>
+ * 鉴权：该端点不在 /capi 下，无法走 TokenInterceptor（前端 PUT 裸二进制时不带 Authorization）。
+ * 改由 {@link OssUploadTicket} 票据鉴权——票据由已登录接口签发、绑定路径且带过期时间，
+ * 从而避免上传端点被匿名滥用为文件托管。
+ * <p>
  * 注意:
  * <ul>
  *     <li>刻意不使用 @ConditionalOnBean，因为自动配置的注册顺序不保证条件成立</li>
@@ -42,8 +46,16 @@ public class LocalOssUploadController {
 
     private final LocalOssTemplate localOssTemplate;
 
+    private final OssUploadTicket ossUploadTicket;
+
     @PutMapping
     public ResponseEntity<Void> upload(@RequestParam("path") String path, HttpServletRequest request) {
+        // 票据校验：签名有效、未过期、且与本次请求路径绑定
+        String ticket = request.getHeader(OssUploadTicket.HEADER);
+        if (!ossUploadTicket.verify(ticket, path)) {
+            log.warn("本地存储拒绝无票据或票据非法的上传请求, path={}", path);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         try (InputStream inputStream = request.getInputStream()) {
             localOssTemplate.writeFile(path, inputStream);
             return ResponseEntity.ok().build();

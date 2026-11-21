@@ -36,10 +36,16 @@ public class LocalOssTemplate implements OssServiceTemplate {
      * 上传接口路径，与 LocalOssUploadController 保持一致。
      * 刻意不放在 /capi 下：前端 PUT 裸二进制时不带 Authorization 头，
      * 放在 /capi 会被 TokenInterceptor 拦截返回 401。
+     * 因此该端点靠 {@link OssUploadTicket} 票据鉴权，而不是会话 token。
      */
     public static final String UPLOAD_PATH = "/oss/upload/local";
 
     OssProperties ossProperties;
+
+    /**
+     * 上传票据签发器，用于保护裸 PUT 上传端点
+     */
+    OssUploadTicket ossUploadTicket;
 
     /**
      * 返回本地上传/下载地址，替代 MinIO 的预签名 URL
@@ -51,6 +57,8 @@ public class LocalOssTemplate implements OssServiceTemplate {
         return OssResp.builder()
                 .uploadUrl(ossProperties.getEndpoint() + UPLOAD_PATH + "?path=" + encodedPath)
                 .downloadUrl(getDownloadUrl(absolutePath))
+                // 前端 PUT 时需回传该票据（请求头 X-Upload-Ticket），否则上传会被拒绝
+                .uploadTicket(ossUploadTicket.sign(absolutePath))
                 .build();
     }
 

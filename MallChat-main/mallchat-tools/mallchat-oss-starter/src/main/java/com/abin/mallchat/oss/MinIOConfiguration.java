@@ -9,6 +9,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * MinIOConfiguration 配置类
+ */
+
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OssProperties.class)
 @ConditionalOnExpression("${oss.enabled}")

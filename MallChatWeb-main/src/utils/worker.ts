@@ -75,11 +75,18 @@ const onConnectError = () => {
 // ws 连接 close
 const onConnectClose = () => {
   onCloseHandler()
-  token = null
+  // 注意：此处不能清空 token。
+  // 重连（initConnection）依赖 token 重新发起 AUTHORIZE，
+  // 提前置空会导致断线重连后永远无法完成鉴权。
   postMsg({ type: 'close' })
 }
 // ws 连接成功
 const onConnectOpen = () => {
+  // 连接建立后第一时间用 AUTHORIZE 消息完成鉴权，而不是把 token 拼在 URL query 上：
+  // URL 会被写入代理/服务器访问日志与浏览器历史，属于凭证泄露面。
+  if (token) {
+    connectionSend({ type: 3, data: { token } })
+  }
   postMsg({ type: 'open' })
   // 心跳❤️检测
   sendHeartPack()
@@ -93,9 +100,15 @@ const initConnection = () => {
   connection?.removeEventListener('open', onConnectOpen)
   connection?.removeEventListener('close', onConnectClose)
   connection?.removeEventListener('error', onConnectError)
+  // 主动关闭旧连接，避免重复 initWS 时遗留僵尸 socket
+  try {
+    connection?.close()
+  } catch {
+    /* 忽略关闭异常 */
+  }
   // 建立链接
   // 本地配置到 .env 里面修改。生产配置在 .env.production 里面
-  connection = new WebSocket(`${import.meta.env.VITE_WS_URL}${token ? `?token=${token}` : ''}`)
+  connection = new WebSocket(import.meta.env.VITE_WS_URL)
   // 收到消息
   connection.addEventListener('message', onConnectMsg)
   // 建立链接

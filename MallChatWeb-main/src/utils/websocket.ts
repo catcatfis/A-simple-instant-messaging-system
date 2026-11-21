@@ -53,7 +53,14 @@ class WS {
   }
 
   onWorkerMsg = (e: MessageEvent<any>) => {
-    const params: { type: string; value: unknown } = JSON.parse(e.data)
+    let params: { type: string; value: unknown }
+    try {
+      params = JSON.parse(e.data)
+    } catch (err) {
+      // 单条畸形消息不应中断整个消息处理链路
+      console.error('WS 消息解析失败:', e.data, err)
+      return
+    }
     switch (params.type) {
       case 'message': {
         this.onMessage(params.value as string)
@@ -84,13 +91,17 @@ class WS {
     setTimeout(() => {
       const userStore = useUserStore()
       const loginStore = useWsLoginStore()
+      if (!this.#connectReady) {
+        // 等待期间连接又断开了：保留任务在队列里，等下次 open 再统一发送，
+        // 否则这里会对着已断开的连接发送并清空队列，导致消息丢失。
+        return
+      }
       if (userStore.isSign) {
-        // 处理堆积的任务
-        this.#tasks.forEach((task) => {
-          this.send(task)
-        })
-        // 清空缓存的消息
+        // 先取快照并立即清空队列，再逐条发送：
+        // 若发送过程中又有新任务入队，它们不会被这次的快照带上，也不会被误清空。
+        const pending = this.#tasks
         this.#tasks = []
+        pending.forEach((task) => this.#send(task))
       } else {
         // 如果没登录，而且已经请求了登录二维码，就要更新登录二维码。
         loginStore.loginQrCode && loginStore.getLoginQrCode()
@@ -115,8 +126,14 @@ class WS {
 
   // 收到消息回调
   onMessage = (value: string) => {
-    // FIXME 可能需要 try catch,
-    const params: { type: WsResponseMessageType; data: unknown } = JSON.parse(value)
+    let params: { type: WsResponseMessageType; data: unknown }
+    try {
+      params = JSON.parse(value)
+    } catch (err) {
+      // 服务端下发的畸形消息不应中断对其他消息的处理
+      console.error('WS 业务消息解析失败:', value, err)
+      return
+    }
     const loginStore = useWsLoginStore()
     const userStore = useUserStore()
     const chatStore = useChatStore()
@@ -188,6 +205,9 @@ class WS {
         userStore.userInfo = {}
         localStorage.removeItem('USER_INFO')
         localStorage.removeItem('TOKEN')
+        // 必须同时清掉请求层缓存的 token，否则后续请求仍会带上已失效的 token，
+        // 造成持续的 401 与重复报错提示
+        computedToken.clear()
         loginStore.loginStatus = LoginStatus.Init
         break
       }

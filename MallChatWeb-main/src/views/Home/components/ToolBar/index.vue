@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ShoppingBag } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useGroupStore } from '@/stores/group'
 import { useGlobalStore } from '@/stores/global'
@@ -45,12 +44,6 @@ const menuList: { name: string; desc: string; icon: string; handler: () => void 
           :max="99"
         >
           <Icon class="tool-icon" icon="group" :size="28" />
-        </el-badge>
-      </router-link>
-      <!-- 商城 -->
-      <router-link v-login-show exactActiveClass="tool-icon-active" to="/mall">
-        <el-badge :hidden="true">
-          <el-icon class="tool-icon" :size="28"><ShoppingBag /></el-icon>
         </el-badge>
       </router-link>
     </div>

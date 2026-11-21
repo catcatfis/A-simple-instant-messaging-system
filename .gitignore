@@ -20,8 +20,17 @@ logs-8083/
 oss-data/
 oss-data2/
 
+# 本地资料 / 工具缓存（不入库）
+.cache/
+.slidep/
+学习文档/
+课件/
+
 # 数据库密码脚本
 import_sql.bat
+
+# 本地私密配置（真实密钥只写在这里，见 application-test.properties 的 spring.config.import）
+mallchat-local.properties
 
 # 构建与缓存
 target/

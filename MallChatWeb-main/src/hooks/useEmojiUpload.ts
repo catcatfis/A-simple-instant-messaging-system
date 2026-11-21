@@ -19,14 +19,19 @@ export const useEmojiUpload = () => {
    * 上传文件
    * @param url 上传链接
    * @param file 文件
+   * @param ticket 本地上传票据（本地 OSS 模式下，后端返回 uploadTicket）
    */
-  const upload = async (url: string, file: File) => {
+  const upload = async (url: string, file: File, ticket?: string) => {
     isEmojiUp.value = true
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open('PUT', url, true)
       xhr.setRequestHeader('Content-Type', file.type)
+      // 本地 OSS 的裸 PUT 端点靠票据鉴权，MinIO 预签名模式下 ticket 为空则不发送
+      if (ticket) {
+        xhr.setRequestHeader('X-Upload-Ticket', ticket)
+      }
       xhr.upload.onprogress = (e) => {
         progress.value = Math.round((e.loaded / e.total) * 100)
       }
@@ -123,12 +128,12 @@ export const useEmojiUpload = () => {
   const uploadEmoji = async (file: File) => {
     const compressFile = (await compressImage(file)) as File
     if (!compressFile) return
-    const { downloadUrl, uploadUrl } = await apis
+    const { downloadUrl, uploadUrl, uploadTicket } = await apis
       .getUploadUrl({ fileName: compressFile.name, scene: '2' })
       .send()
     if (uploadUrl && downloadUrl) {
       onStart.trigger({ file, downloadUrl })
-      upload(uploadUrl, compressFile).then((res) => {
+      upload(uploadUrl, compressFile, uploadTicket).then((res) => {
         if (res) {
           emojiStore.addEmoji(downloadUrl)
         }

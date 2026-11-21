@@ -39,15 +39,4 @@ export default {
   groupDetail: `${prefix}/capi/room/public/group`, // 群组详情
   sessionDetail: `${prefix}/capi/chat/public/contact/detail`, // 会话详情
   sessionDetailWithFriends: `${prefix}/capi/chat/public/contact/detail/friend`, // 会话详情(联系人列表发消息用)
-
-  // -------------- 商城相关 ---------------
-  getShopTypeList: `${prefix}/capi/mall/public/shop-type/list`, // 商户类型
-  getShopOfPage: `${prefix}/capi/mall/public/shop/of/type`, // 按类型分页商户
-  getShopDetail: `${prefix}/capi/mall/public/shop`, // 商户详情
-  getShopVoucherList: `${prefix}/capi/mall/public/voucher/of/shop`, // 商户优惠券
-  getSeckillVoucherList: `${prefix}/capi/mall/public/voucher/seckill/list`, // 秒杀券列表
-  seckillVoucher: `${prefix}/capi/mall/seckill`, // 秒杀下单
-  seckillVoucherWarmup: `${prefix}/capi/mall/seckill/warmup`, // 秒杀库存预热
-  getMyVoucherOrders: `${prefix}/capi/mall/order/my`, // 我的优惠券订单
-  shopGeoInit: `${prefix}/capi/mall/shop/geo/init`, // 导入商户 GEO 数据
 }

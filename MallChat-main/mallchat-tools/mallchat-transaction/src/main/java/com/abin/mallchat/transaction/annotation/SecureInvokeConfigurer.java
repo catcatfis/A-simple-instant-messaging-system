@@ -20,10 +20,18 @@ import org.springframework.lang.Nullable;
 
 import java.util.concurrent.Executor;
 
+/**
+ * 自定义可靠调用执行线程池的接口。
+ *
+ * <p>容器里只能有一个实现（由 TransactionAutoConfiguration 校验）。
+ * 本项目里 ThreadPoolConfig 实现了它，返回专门用于执行重试任务的线程池；
+ * 如果不实现，则默认使用 ForkJoinPool.commonPool()。
+ */
+
 public interface SecureInvokeConfigurer {
 
     /**
-     * 返回一个线程池
+     * 返回执行可靠调用（重试）任务的线程池
      */
     @Nullable
     default Executor getSecureInvokeExecutor() {

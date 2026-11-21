@@ -18,7 +18,13 @@ const close = () => {
   globalStore.addFriendModalInfo.uid = undefined
 }
 const onSend = async () => {
-  await send({ msg: requestMsg.value, targetUid: globalStore.addFriendModalInfo.uid })
+  const targetUid = globalStore.addFriendModalInfo.uid
+  // 未选中目标用户时不应发起请求（原先会以 undefined 作为 uid 发出）
+  if (targetUid === undefined || targetUid === null) {
+    ElMessage.warning('请先选择要添加的用户')
+    return
+  }
+  await send({ msg: requestMsg.value, targetUid })
   ElMessage.success('TA一定会被你的诚意打动的~')
   close()
 }

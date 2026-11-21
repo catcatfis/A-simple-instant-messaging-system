@@ -3,6 +3,10 @@ package com.abin.mallchat.oss;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+/**
+ * OssFile
+ */
+
 @Data
 @AllArgsConstructor
 public class OssFile {

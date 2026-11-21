@@ -221,11 +221,15 @@ export const useChatStore = defineStore('chat', () => {
 
     sortAndUniqueSessionList()
 
+    // 新用户或接口返回空列表时不能再假设 sessionList[0] 存在，否则直接 TypeError 并中断初始化
+    if (sessionList.length === 0) {
+      return
+    }
     sessionList[0].unreadCount = 0
     if (!isFirstInit) {
       isFirstInit = true
-      globalStore.currentSession.roomId = data.list[0].roomId
-      globalStore.currentSession.type = data.list[0].type
+      globalStore.currentSession.roomId = sessionList[0].roomId
+      globalStore.currentSession.type = sessionList[0].type
       // 用会话列表第一个去请求消息列表
       getMsgList()
       // 请求第一个群成员列表

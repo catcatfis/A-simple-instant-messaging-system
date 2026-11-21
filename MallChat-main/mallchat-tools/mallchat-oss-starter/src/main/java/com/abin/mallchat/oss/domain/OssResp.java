@@ -6,12 +6,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 /**
- * Description: 上传url请求出参
- * Author: <a href="https://github.com/zongzibinbin">abin</a>
- * Date: 2023-03-23
+ * 对象存储上传 URL 响应体
  */
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -23,4 +21,7 @@ public class OssResp {
 
     @ApiModelProperty(value = "成功后能够下载的url")
     private String downloadUrl;
+
+    @ApiModelProperty(value = "本地上传票据，PUT 上传时需放入请求头 X-Upload-Ticket；MinIO 预签名模式下为 null")
+    private String uploadTicket;
 }

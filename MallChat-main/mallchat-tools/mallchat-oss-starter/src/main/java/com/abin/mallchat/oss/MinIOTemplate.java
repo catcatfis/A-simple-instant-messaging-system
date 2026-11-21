@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * MinIOTemplate
+ */
+
 @Slf4j
 @AllArgsConstructor
 public class MinIOTemplate implements OssServiceTemplate {

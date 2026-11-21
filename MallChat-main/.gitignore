@@ -65,13 +65,16 @@ Temporary Items
 
 CodeGenerator.java
 TestController.java
+# 本地环境覆盖配置（含真实密钥，绝不提交）
+*.local
 application-my-prod.properties
 application-remote-prod.properties
 application-my-test.properties
+
+# 说明：此前这里用 *.yml 忽略了全部 yml，导致真正生效的 application.yml 无法入库。
+# 现改为“模板入库、密钥出库”：application.yml 只引用 ${MALLCHAT_*} 占位符，可安全提交。
+
 mybatis-generator-config.xml
 ChannelBizRankClient.java
 ChannelBizBrandWallClient.java
 /*/rebel.xml
-
-# yml
-*.yml

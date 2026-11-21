@@ -16,6 +16,10 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * Redis 操作工具类，封装 String/Hash/Set/List/ZSet 常用命令及 Lua 脚本
+ */
+
 @Slf4j
 public class RedisUtils {
 
@@ -38,6 +42,92 @@ public class RedisUtils {
     public static Long inc(String key, int time, TimeUnit unit) {
         RedisScript<Long> redisScript = new DefaultRedisScript<>(LUA_INCR_EXPIRE, Long.class);
         return stringRedisTemplate.execute(redisScript, Collections.singletonList(key), String.valueOf(unit.toSeconds(time)));
+    }
+
+    /**
+     * 固定窗口计数限流：原子地"判断是否超限 + 自增"，避免先读后写在并发下突破阈值。
+     * <p>
+     * 脚本逻辑：对每个 key，若当前计数 >= 阈值则返回 0（表示超限）；
+     * 否则 INCR 并在首次创建时设置过期时间，最后返回 1（表示放行）。
+     *
+     * @param keys        限流 key 列表
+     * @param maxCounts   与 keys 一一对应的阈值
+     * @param ttlSeconds  与 keys 一一对应的窗口长度（秒），仅在 key 首次创建时生效
+     * @return true 表示全部 key 均未超限且已计入本次调用；false 表示至少一个 key 已超限
+     */
+    public static boolean tryAcquire(List<String> keys, List<Integer> maxCounts, List<Long> ttlSeconds) {
+        if (keys == null || keys.isEmpty()) {
+            return true;
+        }
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>(LUA_TRY_ACQUIRE, Long.class);
+        // ARGV 布局：maxCount_1, ttl_1, maxCount_2, ttl_2 ...
+        Object[] args = new Object[keys.size() * 2];
+        for (int i = 0; i < keys.size(); i++) {
+            args[i * 2] = String.valueOf(maxCounts.get(i));
+            args[i * 2 + 1] = String.valueOf(ttlSeconds.get(i));
+        }
+        Long result = stringRedisTemplate.execute(script, keys, args);
+        return result != null && result == 1L;
+    }
+
+    private static final String LUA_TRY_ACQUIRE =
+            "for i = 1, #KEYS do \n" +
+                    "  local key = KEYS[i] \n" +
+                    "  local maxCount = tonumber(ARGV[(i - 1) * 2 + 1]) \n" +
+                    "  local ttl = tonumber(ARGV[(i - 1) * 2 + 2]) \n" +
+                    "  local current = tonumber(redis.call('GET', key) or '0') \n" +
+                    "  if current >= maxCount then \n" +
+                    "    return 0 \n" +
+                    "  end \n" +
+                    "  redis.call('INCR', key) \n" +
+                    "  if current == 0 and ttl > 0 then \n" +
+                    "    redis.call('EXPIRE', key, ttl) \n" +
+                    "  end \n" +
+                    "end \n" +
+                    "return 1 ";
+
+    /**
+     * 自增int（首次写入时设置过期时间，与 inc 共用同一段 Lua 脚本）
+     *
+     * @param key  键
+     * @param time 时间
+     * @param unit 时间单位
+     */
+    public static Integer integerInc(String key, int time, TimeUnit unit) {
+        RedisScript<Long> redisScript = new DefaultRedisScript<>(LUA_INCR_EXPIRE, Long.class);
+        Long result = stringRedisTemplate.execute(redisScript, Collections.singletonList(key), String.valueOf(unit.toSeconds(time)));
+        try {
+            return Integer.parseInt(result.toString());
+        } catch (Exception e) {
+            RedisUtils.del(key);
+            throw e;
+        }
+    }
+
+    /**
+     * 仅当 key 不存在时写入（SET NX 语义），只让第一个写入者生效。
+     * <p>
+     * 注意：值以 JSON 序列化后写入（与 {@link #set(String, Object)} 一致），
+     * 读取时需用 getObj 等方法按 JSON 反序列化；若直接写入裸字符串，
+     * 读取时会抛 JsonParseException: Unrecognized token 'xxx'。
+     *
+     * @param key      键
+     * @param value    值
+     * @param time     过期时间
+     * @param timeUnit 时间单位
+     * @return true 写入成功（此前不存在）；false 已存在，本次未写入
+     */
+    public static Boolean setIfAbsent(String key, Object value, long time, TimeUnit timeUnit) {
+        try {
+            String json = objToStr(value);
+            Boolean success = time > 0
+                    ? stringRedisTemplate.opsForValue().setIfAbsent(key, json, time, timeUnit)
+                    : stringRedisTemplate.opsForValue().setIfAbsent(key, json);
+            return Boolean.TRUE.equals(success);
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return false;
+        }
     }
 
     public static Long ZSetGet(String key) {

@@ -17,10 +17,6 @@ import type {
   SessionItem,
   UserInfoType,
   UserItem,
-  MallShop,
-  MallShopType,
-  MallVoucher,
-  MallVoucherOrder,
 } from '@/services/types'
 import { alovaIns } from './request'
 import urls from './urls'
@@ -63,9 +59,11 @@ export default {
   recallMsg: (data: { msgId: number; roomId: number }) => putRequest<void>(urls.recallMsg, data),
   /** 拉黑用户 */
   blockUser: (data: { uid: number }) => putRequest<void>(urls.blockUser, data),
-  /** 获取临时上传链接 */
+  /** 获取临时上传链接（本地 OSS 模式会额外返回 uploadTicket 票据） */
   getUploadUrl: (params: any) =>
-    getRequest<{ downloadUrl: string; uploadUrl: string }>(urls.fileUpload, { params }),
+    getRequest<{ downloadUrl: string; uploadUrl: string; uploadTicket?: string }>(urls.fileUpload, {
+      params,
+    }),
   /** 新增表情包 */
   addEmoji: (data: { uid: number; expressionUrl: string }) =>
     postRequest<MessageType>(urls.addEmoji, data),
@@ -134,25 +132,4 @@ export default {
     deleteRequest<Boolean>(urls.exitGroup, {
       roomId,
     }),
-
-  // -------------- 商城相关 ---------------
-  /** 商户类型列表 */
-  getShopTypeList: () => getRequest<MallShopType[]>(urls.getShopTypeList),
-  /** 按类型分页查询商户；传经纬度则按距离由近到远排序 */
-  getShopOfPage: (params: { typeId: number; current?: number; x?: number; y?: number }) =>
-    getRequest<MallShop[]>(urls.getShopOfPage, { params }),
-  /** 商户详情（空值占位防穿透） */
-  getShopDetail: (id: number) => getRequest<MallShop>(urls.getShopDetail + '/' + id),
-  /** 商户的优惠券列表 */
-  getShopVoucherList: (shopId: number) =>
-    getRequest<MallVoucher[]>(urls.getShopVoucherList, { params: { shopId } }),
-  /** 秒杀券列表（含库存回填） */
-  getSeckillVoucherList: () => getRequest<MallVoucher[]>(urls.getSeckillVoucherList),
-  /** 秒杀下单，返回订单 id */
-  seckillVoucher: (voucherId: number) => postRequest<number>(`${urls.seckillVoucher}/${voucherId}`),
-  /** 秒杀库存预热到 Redis */
-  seckillVoucherWarmup: (voucherId: number) =>
-    postRequest<void>(`${urls.seckillVoucherWarmup}/${voucherId}`),
-  /** 我的优惠券订单 */
-  getMyVoucherOrders: () => getRequest<MallVoucherOrder[]>(urls.getMyVoucherOrders),
 }

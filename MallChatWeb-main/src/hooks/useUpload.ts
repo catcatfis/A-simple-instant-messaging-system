@@ -37,13 +37,18 @@ export const useUpload = () => {
    * @param url 上传链接
    * @param file 文件
    * @param inner 是否内部调用
+   * @param ticket 本地上传票据（本地 OSS 模式下，后端返回 uploadTicket）
    */
-  const upload = async (url: string, file: File, inner?: boolean) => {
+  const upload = async (url: string, file: File, inner?: boolean, ticket?: string) => {
     isUploading.value = true
 
     const xhr = new XMLHttpRequest()
     xhr.open('PUT', url, true)
     xhr.setRequestHeader('Content-Type', file.type)
+    // 本地 OSS 的裸 PUT 端点靠票据鉴权，MinIO 预签名模式下 ticket 为空则不发送
+    if (ticket) {
+      xhr.setRequestHeader('X-Upload-Ticket', ticket)
+    }
     xhr.upload.onprogress = function (e) {
       if (!inner) {
         progress.value = Math.round((e.loaded / e.total) * 100)
@@ -88,7 +93,7 @@ export const useUpload = () => {
             .send()
             .then((res) => {
               if (res.uploadUrl && res.downloadUrl) {
-                upload(res.uploadUrl, thumbFile, true)
+                upload(res.uploadUrl, thumbFile, true, res.uploadTicket)
                 // 等待上传完成
                 const timer = setInterval(() => {
                   if (!isUploading.value) {
@@ -202,14 +207,14 @@ export const useUpload = () => {
       return
     }
 
-    const { downloadUrl, uploadUrl } = await apis
+    const { downloadUrl, uploadUrl, uploadTicket } = await apis
       .getUploadUrl({ fileName: info.name, scene: '1' })
       .send()
 
     if (uploadUrl && downloadUrl) {
       fileInfo.value = { ...info, downloadUrl }
       onStart.trigger(fileInfo)
-      upload(uploadUrl, file)
+      upload(uploadUrl, file, false, uploadTicket)
     } else {
       trigger('fail')
     }
